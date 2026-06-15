@@ -1,6 +1,3 @@
-//gcc Socket.c -o Socket.exe -lws2_32
-#pragma comment(lib,"ws2_32.lib")
-
 #include<winsock2.h>
 #include<stdio.h>
 #include<windows.h>
@@ -124,45 +121,6 @@ char resHeader[512];
     sscanf(inputBuff,"%15s %200s",method,path);
     //printf("Method:%s\n",method);
     printf("Path:%s\n",path+1);
-    serveFile(clientSoc,(const char*)path); 
-    
-
-/*
-    if(strcmp(path,"/index.html")==0){
-        FILE *fptr;
-        fptr = fopen("index.html","rb");
-    
-    if(fptr==NULL){
-        printf("Failed to read the file.Error Code:%d\n",WSAGetLastError());
-    }
-    fseek(fptr,0,SEEK_END);
-    long fileSize = ftell(fptr);//move the pointer to the end of the file, which equals to the bytes read   
-    rewind(fptr);
-    
-    char html[fileSize];
-    int byteRead=fread(html,1,sizeof(html)-1,fptr);
-    html[byteRead]='\0';
-   
-
-        //printf("\n\nPath is:%s\n\n",path);
-        // Build HTTP header with correct Content-Length
-        sprintf(resHeader,
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: %s\r\n"
-            "Content-Length: %d\r\n"
-            "\r\n",checkMime(path+1),
-            byteRead);
-        
-        int sendHeader=send(clientSoc,resHeader,strlen(resHeader),0);
-        //printf("Header sent: %d bytes\n",sendHeader);
-        
-        int sendBytes=send(clientSoc,html,byteRead,0);
-        if(sendBytes>0){
-            printf("HTML content sent: %d bytes\n",sendBytes);
-        }
-    fclose(fptr);
-    }   
-    */
-    
+    serveFile(clientSoc,(const char*)path);     
 
 }
