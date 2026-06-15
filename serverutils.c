@@ -1,7 +1,8 @@
 #include<string.h>
 #include<stdio.h>
-#include "serverutils.h"
 #include<winsock2.h>
+
+#include "serverutils.h"
 
 
 const char* checkMime(const char *contentType){
@@ -23,7 +24,7 @@ if(strstr(contentType,".html")){
 
 
 
-void serveFile(SOCKET sockfd,const char *requestedFile){
+int serveFile(SOCKET sockfd,const char *requestedFile){
     char resHeader[512];
     const char *fullFileName = requestedFile+1;
     
@@ -37,7 +38,9 @@ void serveFile(SOCKET sockfd,const char *requestedFile){
 
     if(fptr==NULL){
         printf("What ya tryna read,bruhh!\n");
-    }
+    
+    return 1;
+}
     fseek(fptr,0,SEEK_END);
     long fileSize = ftell(fptr);
     rewind(fptr);
@@ -84,11 +87,12 @@ void serveFile(SOCKET sockfd,const char *requestedFile){
     if(sendFileBytes>0){
         printf("Server says:Server sent the files\n");
     }else{
-        printf("[%d]",sendFileBytes);
         printf("Server says:Failed to send files\n");
+    return 1;
     }
 
 fclose(fptr);
+return 0;
 }
 
 
