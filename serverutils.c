@@ -23,7 +23,6 @@ if(strstr(contentType,".html")){
 }
 
 
-
 int serveFile(SOCKET sockfd,const char *requestedFile){
     char resHeader[512];
     const char *fullFileName = requestedFile+1;
@@ -38,28 +37,28 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
 
     if(fptr==NULL){
         printf("What ya tryna read,bruhh!\n");
-    
     return 1;
 }
     fseek(fptr,0,SEEK_END);
     long fileSize = ftell(fptr);
     rewind(fptr);
 
-    char html[fileSize];
-    const char *body="<h1>Error 404</h1><br/><h2>File not found!</h2>";
+    char html[fileSize+1];
 
-    int byteRead = fread(html,1,sizeof(html),fptr);
+
+    int byteRead = fread(html,1,fileSize,fptr);
       sprintf(resHeader,
             "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: %d\r\n",
+            "Content-Type: %s\r\n"
+            "Content-Length: %ld\r\n"
             "\r\n",
-            strlen(body));
+            checkMime(fullFileName),
+            fileSize);
 
         int sendFileHeader = send(sockfd,resHeader,strlen(resHeader),0);
-        int sendFileNotFound = send(sockfd,body,strlen(body),0);
+        int sendFileNotFound = send(sockfd,html,byteRead,0);
         
-        if(sendFileNotFound>0){
+        if(sendFileHeader>0 && sendFileNotFound>0){
             printf("Server says:Sent 404 Page.\n");
         }
             printf("Server says:404 Error.File not found!\n");
@@ -70,7 +69,7 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
     long fileSize = ftell(fptr);
     rewind(fptr);
 
-    char html[fileSize+1];
+    char *html = malloc(fileSize+1);
 
     int totalByteRead = fread(html,1,fileSize,fptr);
 
@@ -82,8 +81,9 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
     checkMime(fullFileName),
     fileSize);
 
-    int sendHeaderBytes = send(sockfd,resHeader,strlen(resHeader),0);
+    send(sockfd,resHeader,strlen(resHeader),0);
     int sendFileBytes = send(sockfd,html,totalByteRead,0);
+    free(html);
     if(sendFileBytes>0){
         printf("Server says:Server sent the files\n");
     }else{
