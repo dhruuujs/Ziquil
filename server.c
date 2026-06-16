@@ -5,7 +5,8 @@
 #include<conio.h>
 #include<string.h>
 #include<stdlib.h>
-#include "serverutils.c"
+
+#include "serverutils.h"
 
 
 #define PORT 8080//server port
@@ -13,7 +14,6 @@
 
 
 
-void display();
 void handleClient(SOCKET clientSoc,char *inputBuff);
 
 int main(){
@@ -26,7 +26,6 @@ int main(){
     struct sockaddr_in server;
     struct sockaddr_in client;
     char data[BUFFER_SIZE];
-
 
 
 
@@ -79,44 +78,43 @@ int main(){
             Sleep(100);
             continue;
         }
-    printf("Accept failed:%d\n",WSAGetLastError());
-    break;
+        printf("Accept funt failed:%d\n",WSAGetLastError());
+        break;
     }
-printf("Handling client now!\n");
+    printf("\nClient Addr details:%lu\n",client.sin_addr.s_addr);
+    printf("Handling client now!\n");
 
-int recByte =recv(acceptClient,data,BUFFER_SIZE-1,0);
+    int recByte =recv(acceptClient,data,BUFFER_SIZE-1,0);
 
-if(recByte>0){
-    //printf("Received data:%s\n",&data);
-    data[recByte] = '\0';
-    handleClient(acceptClient,data);
-}else if(recByte==0){
-    printf("Connection Closed\n");
-}else{
-    printf("Received failed with error:%d\n",WSAGetLastError());
-}
+    if(recByte>0){
+        //printf("Received data:%s\n",&data);
+        data[recByte] = '\0';
+        handleClient(acceptClient,data);
+    }else if(recByte==0){
+        printf("Connection Closed\n");
+    }else{
+        if(WSAGetLastError()==10035){
+            Sleep(10);
+        }
+        printf("Received bytes:%d\n",recByte);
+        printf("Received failed with error:%d\n",WSAGetLastError());
+    }
 
-wsaErr = closesocket(acceptClient);
-if(wsaErr==SOCKET_ERROR){
-    printf("Close failed with error:%d\n",WSAGetLastError());
-}
+    wsaErr = closesocket(acceptClient);
+    if(wsaErr==SOCKET_ERROR){
+        printf("Close failed with error:%d\n",WSAGetLastError());
+    }
 
 }//while loop
 
     closesocket(socketfd);
     WSACleanup();
     return 0;     
-}//main
-
-void display(){
-    printf("When i was a little child, i always wanted to manage the internet. So i grew up to be a web-server ^_____^\r\n");
 }
-
 
 void handleClient(SOCKET clientSoc,char *inputBuff){
 char method[16];
 char path[256];
-char resHeader[512];
 
     sscanf(inputBuff,"%15s %200s",method,path);
     //printf("Method:%s\n",method);
