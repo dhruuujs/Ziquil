@@ -6,6 +6,6 @@
 //#define FILETYPE
 
 const char* checkMime(const char *file);
-void serveFile(SOCKET sockfd,const char *requestedFile);
+int serveFile(SOCKET sockfd,const char *requestedFile);
 
 #endif
