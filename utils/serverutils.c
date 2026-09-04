@@ -5,15 +5,34 @@
 #include<conio.h>
 #include<ws2tcpip.h>
 #include<stdlib.h>
+#include<stdint.h>
 
-#include "utils/serverutils.h"
+
+#include "serverutils.h"
 
 #define PORT 8080
 #define BUFFER_SIZE 2048
 
-
-
+//void errorFunc(const char *msg);
 void handleClient(SOCKET clientSoc,char *inputBuff);
+
+
+typedef struct fileTypes{
+char html;
+char stylesheet;
+char javascript;
+char icons;
+char logo;
+}FileType;
+
+
+typedef struct indexFile{
+char* fileName[100];
+struct fileTypes;
+int indexFileSize;
+}indexedFile;
+
+
 
 
 
@@ -33,6 +52,23 @@ if(strstr(contentType,".html")){
 }
 }
 
+    //TODO-Extract the file name & serve the requested file
+    /*    
+    if(fullFileName=="" || fullFileName =="index.html"){
+
+    fptr = fopen("index.html","rb");
+        if(fptr==NULL){
+        perrro("Unable to get file at this moment!\n")
+        return EXIT_FAILURE;
+        }
+    }
+
+}//Function end here
+    */
+    //if(strcmp("html",fullFileName))
+
+    //fptr =fopen("")
+
 
 int serveFile(SOCKET sockfd,const char *requestedFile){
     char resHeader[512];
@@ -42,11 +78,10 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
 
     FILE *fptr;
 
-
     fptr = fopen(fullFileName,"rb");
 
     if(fptr==NULL){
-    fptr = fopen("utils/FileNotFound.html","rb");
+    fptr = fopen("C:\\My Programs\\Ziquil\\static\\FileNotFound.html","rb");
 
     if(fptr==NULL){
         printf("What ya tryna read,bruhh!\n");
@@ -59,6 +94,10 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
 
     char *html = malloc(fileSize+1);
 
+    if(html==NULL){
+        printf("Failed to allocate memory!.");
+        EXIT_FAILURE;
+    }
 
     int byteRead = fread(html,1,fileSize,fptr);
       sprintf(resHeader,
@@ -78,6 +117,8 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
             printf("Server says:404 Error.File not found!\n");
     
         free(html);
+        fclose(fptr);
+        return 1;
         }//If reading requested file failed
 
 
@@ -147,7 +188,7 @@ int zi_init_server(){
     server.sin_port=htons(PORT);
     server.sin_addr.s_addr=INADDR_ANY;
 
-
+    printf("Data printing now %edd\n",INADDR_ANY);
     int bindInfo =  bind(socketfd,(struct sockaddr*)&server,sizeof(server));
     printf("Server binded to socket\n");
     if(bindInfo!=0){    
@@ -181,23 +222,41 @@ int zi_init_server(){
         printf("Accept func failed:%d\n",WSAGetLastError());
         break;
     }
-    printf("\nClient Addr details:%lu\n",client.sin_addr.s_addr);
     printf("Handling client now!\n");
 
-    int recByte = recv(acceptClient,data,BUFFER_SIZE-1,0);
+/*
+@Call Threds to handle the conn here!!
+*/
+    int recByte; 
+    int retries=0;
+
+    while(1){
+        recByte = recv(acceptClient,data,BUFFER_SIZE-1,0);
+
+        if(recByte>0) break;
+        
+        if(recByte==0){
+            printf("Connection Closed\n");
+        break;
+        }
+        
+        if(WSAGetLastError()==WSAEWOULDBLOCK){    
+                Sleep(100);
+            retries++;
+            if(retries==100){
+                printf("Funtion recv() timed out for client data!\n");
+                break;
+            }
+            continue;  
+        }
+        printf("Received failed with error:%d\n",WSAGetLastError());
+        break;
+    }
+
 
     if(recByte>0){
-        //printf("Received data:%s\n",&data);
-        data[recByte] = '\0';
+        data[recByte]='\0';
         handleClient(acceptClient,data);
-    }else if(recByte==0){
-        printf("Connection Closed\n");
-    }else{
-        if(WSAGetLastError()==10035){
-            Sleep(10);
-        }
-        printf("Received bytes:%d\n",recByte);
-        printf("Received failed with error:%d\n",WSAGetLastError());
     }
 
     wsaErr = closesocket(acceptClient);
@@ -219,19 +278,10 @@ char path[256];
     sscanf(inputBuff,"%15s %200s",method,path);
     //printf("Method:%s\n",method);
     printf("Path:%s\n",path+1);
-    serveFile(clientSoc,(const char*)path);     
+    if(serveFile(clientSoc,(const char*)path)!=0){
+        perror("Failed to server files.\n");
+    }
 }
 
-
-
-char *handlePath(char *path){
-
-
-while(path){
-
-
-
-}
-
-
-}
+/*
+char *handlePath(char *path){while(path){}}*/

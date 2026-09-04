@@ -1,10 +1,9 @@
 #include<stdio.h>
-
-#include "serverutils.h"
+#include "utils/serverutils.h"
 
 
 int main(){
    zi_init_server(); 
-    return 0;     
+    return EXIT_SUCCESS;     
 }
 
