@@ -16,25 +16,6 @@
 void handleClient(SOCKET clientSoc,char *inputBuff);
 
 
-typedef struct fileTypes{
-char html;
-char stylesheet;
-char javascript;
-char icons;
-char logo;
-}FileType;
-
-
-typedef struct indexFile{
-char* fileName[100];
-struct fileTypes;
-int indexFileSize;
-}indexedFile;
-
-
-
-
-
 const char* checkMime(const char *contentType){
 if(strstr(contentType,".html")){
     return "text/html";
