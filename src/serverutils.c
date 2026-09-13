@@ -5,10 +5,9 @@
 #include<conio.h>
 #include<ws2tcpip.h>
 #include<stdlib.h>
-#include<stdint.h>
 
 
-#include "include/serverutils.h"
+#include "../include/serverutils.h"
 
 #define PORT 8080
 #define BUFFER_SIZE 2048
@@ -71,17 +70,19 @@ if(strstr(contentType,".html")){
 
 
 int serveFile(SOCKET sockfd,const char *requestedFile){
+    char s1[]="public\\";
     char resHeader[512];
     const char *fullFileName = requestedFile+1;
     
-    printf("User requested file:%s\n",fullFileName);
+    strcat(s1,fullFileName);
+    printf("User requested file:%s\n",s1);
 
     FILE *fptr;
-
-    fptr = fopen(fullFileName,"rb");
+    fptr = fopen(s1,"rb");
 
     if(fptr==NULL){
-    fptr = fopen("C:\\My Programs\\Ziquil\\static\\FileNotFound.html","rb");
+    //
+        fptr = fopen("public\\FileNotFound.html","rb");
 
     if(fptr==NULL){
         printf("What ya tryna read,bruhh!\n");
@@ -279,7 +280,7 @@ char path[256];
     //printf("Method:%s\n",method);
     printf("Path:%s\n",path+1);
     if(serveFile(clientSoc,(const char*)path)!=0){
-        perror("Failed to server files.\n");
+        perror("Failed to serve files.\n");
     }
 }
 
