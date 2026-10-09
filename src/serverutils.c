@@ -6,17 +6,25 @@
 #include<ws2tcpip.h>
 #include<stdlib.h>
 
-
 #include "../include/serverutils.h"
 
 #define PORT 8080
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 2048 //2048KB for total header size, recommened to expand to 1024*4(4KB) in size for request header and url
 
-//void errorFunc(const char *msg);
 void handleClient(SOCKET clientSoc,char *inputBuff);
+
+void ziGetVersion(){
+    printf("Server version:1.5.0\n");
+}
+
+Cookies cookies = { "hello", 15};//Setting up data
+statusCode responseCode = OK;
 
 
 const char* checkMime(const char *contentType){
+
+if(contentType=="" || contentType[0]=='\0') return "";
+
 if(strstr(contentType,".html")){
     return "text/html";
 }else if(strstr(contentType,".css")){
@@ -32,37 +40,29 @@ if(strstr(contentType,".html")){
 }
 }
 
-    //TODO-Extract the file name & serve the requested file
-    /*    
-    if(fullFileName=="" || fullFileName =="index.html"){
-
-    fptr = fopen("index.html","rb");
-        if(fptr==NULL){
-        perrro("Unable to get file at this moment!\n")
-        return EXIT_FAILURE;
-        }
-    }
-
-}//Function end here
-    */
-    //if(strcmp("html",fullFileName))
-
-    //fptr =fopen("")
-
 
 int serveFile(SOCKET sockfd,const char *requestedFile){
-    char s1[]="public\\";
+    char s1[512] = "public\\";
     char resHeader[512];
-    const char *fullFileName = requestedFile+1;
-    
-    strcat(s1,fullFileName);
+    const char *fullFileName = requestedFile ? requestedFile + 1 : "";
+
+    if(fullFileName[0]=='\0'){
+        fullFileName = "index.html";
+    }
+
+    printf("Requested path:%s \n",requestedFile);
+
+
+    snprintf(s1,sizeof(s1),"public\\%s",fullFileName);
     printf("User requested file:%s\n",s1);
 
+
+    /*If index.html is failed to open, it fallback to the 
+    404 error page from here.*/
     FILE *fptr;
     fptr = fopen(s1,"rb");
-
     if(fptr==NULL){
-    //
+
         fptr = fopen("public\\FileNotFound.html","rb");
 
     if(fptr==NULL){
@@ -81,12 +81,15 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
         EXIT_FAILURE;
     }
 
+
     int byteRead = fread(html,1,fileSize,fptr);
-      sprintf(resHeader,
-            "HTTP/1.1 404 Not Found\r\n"
+      snprintf(resHeader,
+        sizeof(resHeader),
+            "HTTP/1.1 %d Not Found\r\n"
             "Content-Type: %s\r\n"
             "Content-Length: %ld\r\n"
             "\r\n",
+            httpCode=NOT_FOUND,
             "html",
             fileSize);
 
@@ -109,19 +112,23 @@ int serveFile(SOCKET sockfd,const char *requestedFile){
     rewind(fptr);
 
     char *html = malloc(fileSize+1);
-
     int totalByteRead = fread(html,1,fileSize,fptr);
 
-    sprintf(resHeader,
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type:%s\r\n"
+    snprintf(resHeader,
+    sizeof(resHeader),
+    "HTTP/1.1 %d OK\r\n"
+    "Content-Type:%s; charset=\"utf-8\"\r\n"
     "Content-Length:%ld\r\n"
+    "Set-Cookie: session_id=%s; Expires=%d\r\n"
     "\r\n",
+    responseCode=OK,
     checkMime(fullFileName),
-    fileSize);
+    fileSize,cookies.data,cookies.maxAge);
 
-    send(sockfd,resHeader,strlen(resHeader),0);
-    int sendFileBytes = send(sockfd,html,totalByteRead,0);
+
+
+    send(sockfd,resHeader,strlen(resHeader),0);//Sending the header
+    int sendFileBytes = send(sockfd,html,totalByteRead,0);//Sending the body
     free(html);
     if(sendFileBytes>0){
         printf("Server says:Server sent the files\n");
@@ -134,13 +141,8 @@ fclose(fptr);
 return 0;
 }
 
-void zi_get_server_desc(){
-printf("Ziquil Server version:0.2\n");
-}
 
-
-
-int zi_init_server(){
+int ziInitServer(){
     WORD  wVersionRequested;
     WSADATA wsaData;
     SOCKET socketfd = INVALID_SOCKET;
@@ -170,7 +172,7 @@ int zi_init_server(){
     server.sin_port=htons(PORT);
     server.sin_addr.s_addr=INADDR_ANY;
 
-    printf("Data printing now %edd\n",INADDR_ANY);
+    printf("Data printing now %lu\n",INADDR_ANY);
     int bindInfo =  bind(socketfd,(struct sockaddr*)&server,sizeof(server));
     printf("Server binded to socket\n");
     if(bindInfo!=0){    
@@ -192,10 +194,21 @@ int zi_init_server(){
         printf("Server listening at port:%d\n",PORT);
     }
 
+    char ip_str[INET_ADDRSTRLEN];
+    //inet_ntop(AF_INET,&(client.sin_addr.s_addr),ip_str,INET_ADDRSTRLEN);
+
+
     while(1){
     clientAddr_size = sizeof(client);
 
     SOCKET acceptClient = accept(socketfd,(struct sockaddr*)&client,(int*)&clientAddr_size);
+
+    //Printing client ip
+    //Added functin inet_ntop on 12:01PM, 6/10/26
+    inet_ntop(AF_INET,&(client.sin_addr.s_addr),ip_str,INET_ADDRSTRLEN);
+    printf("Client %s connected.\n",ip_str);
+    
+
     if(acceptClient==INVALID_SOCKET){
         if(WSAGetLastError()==WSAEWOULDBLOCK){
             Sleep(100);
@@ -207,7 +220,7 @@ int zi_init_server(){
     printf("Handling client now!\n");
 
 /*
-@Call Threds to handle the conn here!!
+@Call Threads to handle the conn here!!
 */
     int recByte; 
     int retries=0;
@@ -259,11 +272,10 @@ char path[256];
 
     sscanf(inputBuff,"%15s %200s",method,path);
     //printf("Method:%s\n",method);
-    printf("Path:%s\n",path+1);
+    
     if(serveFile(clientSoc,(const char*)path)!=0){
         perror("Failed to serve files.\n");
     }
 }
 
-/*
-char *handlePath(char *path){while(path){}}*/
+
